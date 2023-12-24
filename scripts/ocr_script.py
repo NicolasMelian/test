@@ -4,7 +4,7 @@ import pytesseract
 from pytesseract import image_to_string
 
 # Configurar la ruta del ejecutable de Tesseract si no está en tu PATH
-pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
+pytesseract.pytesseract.tesseract_cmd = '/opt/homebrew/bin/tesseract'
 
 
 def preprocess_image(image_path):
@@ -18,8 +18,11 @@ def preprocess_image(image_path):
 
 def extract_text(img):
     try:
-        # Especificar múltiples idiomas
-        return image_to_string(img, lang='eng+spa+por')
+        text = image_to_string(img, lang='eng+spa+por')
+        # Verificar si el texto es solo espacios en blanco o caracteres de control
+        if text.strip() == '':
+            return "No pudimos encontrar texto en su imagen."
+        return text
     except Exception as e:
         return str(e)
 

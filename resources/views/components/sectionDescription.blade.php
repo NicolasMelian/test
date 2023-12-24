@@ -5,7 +5,7 @@
             <h3 class="text-lg mb-6">Olvidate de ir escribiendo palabra por palabra tu imagen con parrafos de texto. Solo subela a nuestra convertidor de imagen a texto y luego copia el texto o descargalo con un simple click.</h3>
             <div class="flex flex-wrap container mx-auto p-4 max-w-screen-lg">
                 <div class="flex w-full md:w-1/2 px-4 md:px-0 justify-center items-center">
-                    <img src="/images/imagencontexto.png" style="width:250px" alt="">
+                    <img src="/images/imagenConTexto.png" style="width:250px" alt="">
                 </div>
                 <div class="flex w-full md:w-1/2 px-6 md:px-0 justify-center items-center">
                     <textarea class="w-full" rows="12">XXXVI. TEXTO I. LIGERAMENTE. A LA LIGERA.

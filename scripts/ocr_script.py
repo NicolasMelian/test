@@ -4,7 +4,7 @@ import pytesseract
 from pytesseract import image_to_string
 
 # Configurar la ruta del ejecutable de Tesseract si no está en tu PATH
-pytesseract.pytesseract.tesseract_cmd = '/opt/homebrew/bin/tesseract'
+pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
 
 
 def preprocess_image(image_path):

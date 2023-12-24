@@ -1,4 +1,5 @@
 import sys
+import re
 from PIL import Image, ImageEnhance, ImageFilter
 import pytesseract
 from pytesseract import image_to_string
@@ -16,13 +17,17 @@ def preprocess_image(image_path):
 
 def extract_text(img):
     try:
-        text = image_to_string(img, lang='eng+spa+por')
-        # Verificar si el texto es solo espacios en blanco o caracteres de control
+        text = image_to_string(img, lang='eng+spa')
         if text.strip() == '':
             return "No pudimos encontrar texto en su imagen."
+        
+        # Eliminar renglones vacíos
+        text = re.sub(r'\n\s*\n', '\n', text)
+
         return text
     except Exception as e:
         return str(e)
+
 
 if __name__ == '__main__':
     image_path = sys.argv[1]

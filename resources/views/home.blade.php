@@ -3,6 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Convierte imágenes a texto fácilmente con nuestro avanzado convertidor online. Ideal para extraer texto de fotos, documentos escaneados y capturas de pantalla. Convierte de imagen a texto, foto a texto o jpg a texto de manera rápida y precisa.">
+
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">

@@ -17,22 +17,26 @@
           @endauth
           @endif
           @guest
-            <a class="btn text-base mr-4 premium" href="/billing">
+          <li>  <a class="btn text-base mr-4 premium" href="/billing">
               Hazte Premium
           </a>
+          </li>
           @endguest
           @auth
           @if (Auth::user()->subscribed())
           <li class="justify-center mr-4"><a class="text-base" href="/billing">
               Suscripción
-          </a></li>
+          </a>
+        </li>
           
           @else
-              <a class="btn text-base mr-4 premium" href="/billing">
+        <li>
+          <a class="btn text-base mr-4 premium" href="/billing">
                   Hazte Premium
-              </a>
-          
+          </a>
+        </li> 
           @endif
+          <li>
           <form class="text-center items-center" method="POST" action="{{ route('logout') }}">
               @csrf
               <li class="justify-center mr-4"><a class="text-base" href="{{ route('logout') }}"
@@ -41,10 +45,11 @@
                   Cerrar Sesión
           </a></li>
           </form>
+          </li>
           @endauth
         </ul>
       </div>
-      <a href="/"><img src="images/logo-imagenatexto.png" class="logo" width="180px"/></a>
+      <a href="/"><img src="images/logo-imagenatexto.png" class="logo" style="width:180px; height:36px"/></a>
     </div>
   
   
@@ -68,11 +73,13 @@
         </a></li>
         
         @else
+        <li>
             <a class="btn text-base mr-4 premium" href="/billing">
                 Hazte Premium
             </a>
-        
+        </li>
         @endif
+        <li>
         <form class="text-center items-center" method="POST" action="{{ route('logout') }}">
             @csrf
             <li class="mr-4 text-base"><a href="{{ route('logout') }}"
@@ -81,11 +88,14 @@
                 Cerrar Sesión
         </a></li>
         </form>
+        </li>
         @endauth
         @guest
+        <li>
             <a class="btn text-base mr-4 premium" href="/billing">
               Hazte Premium
           </a>
+        </li>
           @endguest
       </ul>
     </div> 

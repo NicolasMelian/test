@@ -1,5 +1,5 @@
 <div class="mt-20">
-    <footer class="footer p-10 bg-neutral text-neutral-content">
+    <footer class="footer p-10 bg-neutral text-white">
       <nav>
         <header class="footer-title text-lg">Imagen A Texto</header> 
         <span class="text-base">Todos los derechos reservados</span>

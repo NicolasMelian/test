@@ -38,21 +38,22 @@
 </div>
 <div class="container mx-auto p-4 max-w-screen-lg">
     <form action="{{ url('/') }}" method="post" enctype="multipart/form-data" id="my-form" class="text-center border-2 border-dashed border-primary rounded-lg pb-12 pt-12 text-center">
-    @csrf
-    <div id="arrastra" class="text-lg font-semibold">
-        Arrastra tus imágenes aquí
-    </div>
-
-    <!-- En algún lugar dentro de su formulario o cerca de él -->
-    <div id="loading-spinner-container" class="hidden">
-        <span class="loading loading-spinner loading-lg"></span>
-    </div>
-
-
-    <input type="file" name="images[]" id="image" accept="image/*" class="file-input file-input-bordered file-input-primary w-full max-w-xs mx-auto block mt-4" multiple onchange="previewImage(event)"><button type="submit" class="btn text-white text-base btn-primary mt-6 mb-2">Extraer Texto</button>
-    <button id="restart-button" type="button" class="btn text-base btn-secondary mt-6 mb-2 hidden">Volver a empezar</button>
-
+        @csrf
+        <div id="arrastra" class="text-lg font-semibold">
+            Arrastra tus imágenes aquí
+        </div>
+    
+        <!-- En algún lugar dentro de su formulario o cerca de él -->
+        <div id="loading-spinner-container" class="hidden">
+            <span class="loading loading-spinner loading-lg"></span>
+        </div>
+    
+        <label for="image" class="hidden">Subir Imagen</label>
+        <input type="file" name="images[]" id="image" accept="image/*" class="file-input file-input-bordered file-input-primary w-full max-w-xs mx-auto block mt-4" multiple onchange="previewImage(event)">
+        <button type="submit" class="btn text-white text-base btn-primary mt-6 mb-2">Extraer Texto</button>
+        <button id="restart-button" type="button" class="btn text-base btn-secondary mt-6 mb-2 hidden">Volver a empezar</button>
     </form>
+    
 
    
    <div id="image-preview-container" class="mt-4"></div>

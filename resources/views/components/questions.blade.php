@@ -1,7 +1,7 @@
 <div class="pt-20 pb-20">
     <div class="container mx-auto max-w-screen-lg">
        
-        <div class="pt-20 pb-20 bg-white">
+        <div class="pt-20 pb-10 bg-white">
             <div class="container mx-auto px-4 max-w-screen-lg">
                 <div class="text-center mb-10">
                     <h1 class="text-3xl font-bold text-gray-800">¿Por qué usar Nuestra Herramienta?</h1>

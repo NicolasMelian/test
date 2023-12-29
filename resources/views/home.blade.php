@@ -85,7 +85,7 @@
 <dialog id="my_modal_1" class="modal">
   <div class="modal-box text-center">
     <h3 class="font-bold text-lg">Limite Máximo: 3 Imágenes</h3>
-    <p class="py-2">¡Compra nuestra subscripcion y sube hasta 50 imagenes a la vez!</p>
+    <p class="py-2">¡Compra nuestra subscripcion y sube hasta 30 imagenes a la vez!</p>
     <div class="modal-action justify-center">
       <form method="dialog">
         <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
@@ -141,7 +141,7 @@ var isSubscribed = false;
 
 let archivosTotales = [];
 let imagenCounter= 0;
-const limiteDeImagenes = isSubscribed ? 50 : 3;
+const limiteDeImagenes = isSubscribed ? 30 : 3;
 let contadorImagenes = 0;
 const tamañoImagenes = 3 * 1024 * 1024; // 3 MB
 const tamañoMaximoImagenes = isSubscribed ? 15 * 1024 * 1024 : 3 * 1024 * 1024; // 15 MB
@@ -150,7 +150,7 @@ const tamañoMaximoImagenes = isSubscribed ? 15 * 1024 * 1024 : 3 * 1024 * 1024;
 if (isSubscribed) {
     // Configuración para usuarios suscritos
     document.querySelector('#my_modal_1 .modal-box h3').textContent = "Limite Máximo Alcanzado";
-    document.querySelector('#my_modal_1 .modal-box p').textContent = "Has alcanzado el límite máximo de 50 imágenes.";
+    document.querySelector('#my_modal_1 .modal-box p').textContent = "Has alcanzado el límite máximo de 30 imágenes.";
     // Ocultar el botón de suscripción
     let premiumButton = document.querySelector('#my_modal_1 .premium');
     if (premiumButton) premiumButton.style.display = 'none';
@@ -224,11 +224,18 @@ document.getElementById('image').addEventListener('change', function(){
 
 function handleDragOver(e) {
     e.preventDefault();
-    // Aquí puedes agregar cualquier lógica adicional necesaria
+    this.classList.add('bg-indigo-100');
+}
+
+function handleDragLeave(e) {
+    e.preventDefault();
+    this.classList.remove('bg-indigo-100');
 }
 
 function handleDrop(e) {
     e.preventDefault();
+    this.classList.remove('bg-indigo-100');
+    
     let archivosDesdeDrag = e.dataTransfer.files;
     if(contadorImagenes + archivosDesdeDrag.length > limiteDeImagenes){
         document.getElementById('my_modal_1').showModal();
@@ -240,6 +247,7 @@ function handleDrop(e) {
 
 document.querySelector('#my-form').addEventListener('dragover', handleDragOver);
 document.querySelector('#my-form').addEventListener('drop', handleDrop);
+document.querySelector('#my-form').addEventListener('dragleave', handleDragLeave);
 
 
 
@@ -340,8 +348,13 @@ function mostrarResultados(data) {
 // Deshabilitar drag and drop
 document.querySelector('#my-form').removeEventListener('dragover', handleDragOver);
 document.querySelector('#my-form').removeEventListener('drop', handleDrop);
+document.querySelector('#my-form').removeEventListener('dragleave', handleDragLeave);
 document.getElementById('restart-button').classList.remove('hidden');
 document.getElementById('arrastra').classList.add('hidden');
+// remover clase border-primary al formulario
+document.getElementById('my-form').classList.remove('border-primary');
+// agregar clase border-neutral al formulario
+document.getElementById('my-form').classList.add('border-secondary');
 
 
 } 
@@ -376,15 +389,23 @@ document.getElementById('restart-button').addEventListener('click', function() {
     document.getElementById('image').classList.remove('hidden'); // Mostrar input
     document.getElementById('arrastra').classList.remove('hidden');
 
+    // Reasignar clase border-primary al formulario
+    document.getElementById('my-form').classList.add('border-primary');
+    // remover clase border-secondary al formulario
+    document.getElementById('my-form').classList.remove('border-secondary');
+
     this.classList.add('hidden'); // Ocultar botón "Volver a empezar"
 
     archivosTotales = []; // Reiniciar lista de archivos
     contadorImagenes = 0; // Reiniciar el contador de imágenes
 
     // Reasignar eventos de drag and drop
-    var formElement = document.querySelector('#my-form');
+    var formElement = document.querySelector('my-form');
     formElement.addEventListener('dragover', handleDragOver);
     formElement.addEventListener('drop', handleDrop);
+    formElement.addEventListener('dragleave', handleDragLeave);
+
+        
 
     asignarArchivosAInput(); // Asignar de nuevo los archivos totales al input
 });

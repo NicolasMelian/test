@@ -17,7 +17,7 @@
           @endauth
           @endif
           @guest
-          <a class="btn text-base mr-4 premium" href="/billing">
+          <a class="btn text-base mr-4 premium" href="#precio">
              Premium
           </a>
           
@@ -31,7 +31,7 @@
           
           @else
         
-          <a class="btn text-base mr-4 premium" href="/billing">
+          <a class="btn text-base mr-4 premium" href="#precio">
                    Premium
           </a>
         
@@ -92,7 +92,7 @@
         @endauth
         @guest
         
-            <a class="btn text-base mr-4 premium" href="/billing">
+            <a class="btn text-base mr-4 premium" href="#precio">
                Premium
           </a>
         

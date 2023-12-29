@@ -21,7 +21,10 @@ def extract_text(img):
         if text.strip() == '':
             return "No pudimos encontrar texto en su imagen."
         
-        # Eliminar renglones vacíos
+        # Eliminar espacios en blanco y líneas vacías al inicio y final
+        text = text.strip()
+
+        # Eliminar renglones vacíos dentro del texto
         text = re.sub(r'\n\s*\n', '\n', text)
 
         return text

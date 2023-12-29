@@ -1,6 +1,6 @@
 <div class="justify-center align-center text-center mt-10" id="premium">
     <!-- Waste no more time arguing what a good man should be, be one. - Marcus Aurelius -->
-    <h2 class="font-bold text-4xl text-neutral mt-12 mb-8">Precio</h2>
+    <h2 class="font-bold text-4xl text-neutral mt-12 mb-8" id="precio">Precio</h2>
     <h3 class="text-xl">Adquiere una de nuestras subscripciones y pasa tus imagenes a textos sin limites.</h3>
 
 

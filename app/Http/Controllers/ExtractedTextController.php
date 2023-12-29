@@ -18,7 +18,7 @@ class ExtractedTextController extends Controller
     public function extractText(Request $request){
         $user = Auth::user();
         $maxFileSize = $user && $user->subscribed() ? 15360 : 3072;
-        $maxFilesCount = $user && $user->subscribed() ? 50 : 3;
+        $maxFilesCount = $user && $user->subscribed() ? 30 : 3;
 
 
         $request->validate([

@@ -224,7 +224,16 @@ document.getElementById('image').addEventListener('change', function(){
 
 function handleDragOver(e) {
     e.preventDefault();
-    // Aquí puedes agregar cualquier lógica adicional necesaria
+
+    // cambiar el fondo al formulario a bg-100
+    document.getElementById('my-form').classList.add('bg-indigo-100');
+}
+
+function handleDragLeave(e) {
+    e.preventDefault();
+
+    // cambiar el fondo al formulario a bg-100
+    document.getElementById('my-form').classList.remove('bg-indigo-100');
 }
 
 function handleDrop(e) {
@@ -236,10 +245,15 @@ function handleDrop(e) {
     }
     previewImage(archivosDesdeDrag);
     actualizarArchivosTotales(Array.from(archivosDesdeDrag));
+
+    // cambiar el fondo al formulario a bg-indigo-100
+    document.getElementById('my-form').classList.remove('bg-indigo-100');
+
 }
 
 document.querySelector('#my-form').addEventListener('dragover', handleDragOver);
 document.querySelector('#my-form').addEventListener('drop', handleDrop);
+document.querySelector('#my-form').addEventListener('dragleave', handleDragLeave);
 
 
 
@@ -340,6 +354,7 @@ function mostrarResultados(data) {
 // Deshabilitar drag and drop
 document.querySelector('#my-form').removeEventListener('dragover', handleDragOver);
 document.querySelector('#my-form').removeEventListener('drop', handleDrop);
+document.querySelector('#my-form').removeEventListener('dragleave', handleDragLeave);
 document.getElementById('restart-button').classList.remove('hidden');
 document.getElementById('arrastra').classList.add('hidden');
 
@@ -385,6 +400,7 @@ document.getElementById('restart-button').addEventListener('click', function() {
     var formElement = document.querySelector('#my-form');
     formElement.addEventListener('dragover', handleDragOver);
     formElement.addEventListener('drop', handleDrop);
+    formElement.addEventListener('dragleave', handleDragLeave);
 
     asignarArchivosAInput(); // Asignar de nuevo los archivos totales al input
 });

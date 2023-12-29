@@ -224,18 +224,11 @@ document.getElementById('image').addEventListener('change', function(){
 
 function handleDragOver(e) {
     e.preventDefault();
-    this.classList.add('bg-indigo-100');
-}
-
-function handleDragLeave(e) {
-    e.preventDefault();
-    this.classList.remove('bg-indigo-100');
+    // Aquí puedes agregar cualquier lógica adicional necesaria
 }
 
 function handleDrop(e) {
     e.preventDefault();
-    this.classList.remove('bg-indigo-100');
-    
     let archivosDesdeDrag = e.dataTransfer.files;
     if(contadorImagenes + archivosDesdeDrag.length > limiteDeImagenes){
         document.getElementById('my_modal_1').showModal();
@@ -247,7 +240,6 @@ function handleDrop(e) {
 
 document.querySelector('#my-form').addEventListener('dragover', handleDragOver);
 document.querySelector('#my-form').addEventListener('drop', handleDrop);
-document.querySelector('#my-form').addEventListener('dragleave', handleDragLeave);
 
 
 
@@ -348,7 +340,6 @@ function mostrarResultados(data) {
 // Deshabilitar drag and drop
 document.querySelector('#my-form').removeEventListener('dragover', handleDragOver);
 document.querySelector('#my-form').removeEventListener('drop', handleDrop);
-document.querySelector('#my-form').removeEventListener('dragleave', handleDragLeave);
 document.getElementById('restart-button').classList.remove('hidden');
 document.getElementById('arrastra').classList.add('hidden');
 // remover clase border-primary al formulario
@@ -403,7 +394,6 @@ document.getElementById('restart-button').addEventListener('click', function() {
     var formElement = document.querySelector('my-form');
     formElement.addEventListener('dragover', handleDragOver);
     formElement.addEventListener('drop', handleDrop);
-    formElement.addEventListener('dragleave', handleDragLeave);
 
         
 

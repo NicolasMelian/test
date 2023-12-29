@@ -1,1 +1,1 @@
-<a href="/"><img src="images/logo-imagenatexto.png" class="logo" style="width:180px; height:34.35px" /></a>
+<a href="/"><img src="images/logo-imagenatexto.png" class="logo" style="width:180px" /></a>

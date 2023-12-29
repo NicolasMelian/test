@@ -49,7 +49,7 @@
           @endauth
         </ul>
       </div>
-      <a href="/"><img src="images/logo-imagenatexto.png" class="logo" style="width:180px; height:34.35px" alt="log de Imagenatexto.com"/></a>
+      <a href="/"><img src="images/logo-imagenatexto.png" class="logo" style="width:180px" alt="log de Imagenatexto.com"/></a>
     </div>
   
   

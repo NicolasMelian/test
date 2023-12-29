@@ -348,6 +348,10 @@ function mostrarResultados(data) {
       // Ocultar el botón "Extraer Texto"
       document.querySelector('button[type="submit"]').classList.add('hidden');
 
+        // quitar del formulario la clase border-primary y agregar la clase border-secondary
+        document.getElementById('my-form').classList.remove('border-primary');
+        document.getElementById('my-form').classList.add('border-secondary');
+
       // ocultar el input
         document.getElementById('image').classList.add('hidden');
 
@@ -392,12 +396,16 @@ document.getElementById('restart-button').addEventListener('click', function() {
     document.getElementById('arrastra').classList.remove('hidden');
 
     this.classList.add('hidden'); // Ocultar botón "Volver a empezar"
+    
+    // Reasignar eventos de drag and drop
+    var formElement = document.querySelector('#my-form');
+
+    document.getElementById('my-form').classList.add('border-primary'); // Agregar borde primario al formulario
+    document.getElementById('my-form').classList.remove('border-secondary'); // Eliminar el fondo del formulario
 
     archivosTotales = []; // Reiniciar lista de archivos
     contadorImagenes = 0; // Reiniciar el contador de imágenes
 
-    // Reasignar eventos de drag and drop
-    var formElement = document.querySelector('#my-form');
     formElement.addEventListener('dragover', handleDragOver);
     formElement.addEventListener('drop', handleDrop);
     formElement.addEventListener('dragleave', handleDragLeave);

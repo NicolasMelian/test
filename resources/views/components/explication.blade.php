@@ -34,7 +34,7 @@
     </div>
   
     <!-- Cuarto Elemento: Texto Derecha, Imagen Izquierda en pantallas grandes -->
-    <div class="flex flex-col md:flex-row-reverse items-center mb-8">
+    <div class="flex flex-col md:flex-row-reverse items-center mb-16 mt-16">
       <div class="w-full md:w-1/2 px-4 text-center md:text-left">
         <h2 class="text-2xl mb-2 font-bold text-primary">4. Empezar de nuevo</h2>
         <p>Si quieres extraer el texto de más imagenes, haz click en empezar de nuevo, nuestro formulario se limpia y puedes subiar más imagenes o fotos.</p>
@@ -43,6 +43,8 @@
         <img src="/images/imagen4-descripcion.png" class="w-full max-w-md mx-auto" alt="Paso 4 para sacar texto de imagen"  style="width:700px, height:300px">
       </div>
     </div>
+
+
   
   </div>
   

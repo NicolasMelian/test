@@ -59,7 +59,7 @@
                                 </li>
                             </ul>
                             <a class="btn button gradient mt-6 premium" href="/billing">
-                                Hazte Premium
+                                Desbloquear Premium
                             </a>
                         </div>
                     </div>
@@ -120,7 +120,7 @@
                                 </li>
                             </ul>
                             <a class="btn button gradient mt-6 premium" href="/billing">
-                                Hazte Premium
+                                Desbloquear Premium
                             </a>
                         </div>
                     </div>

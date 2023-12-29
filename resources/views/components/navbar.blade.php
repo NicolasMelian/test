@@ -17,10 +17,10 @@
           @endauth
           @endif
           @guest
-          <li>  <a class="btn text-base mr-4 premium" href="/billing">
-              Hazte Premium
+          <a class="btn text-base mr-4 premium" href="/billing">
+             Premium
           </a>
-          </li>
+          
           @endguest
           @auth
           @if (Auth::user()->subscribed())
@@ -30,11 +30,11 @@
         </li>
           
           @else
-        <li>
+        
           <a class="btn text-base mr-4 premium" href="/billing">
-                  Hazte Premium
+                   Premium
           </a>
-        </li> 
+        
           @endif
           <li>
           <form class="text-center items-center" method="POST" action="{{ route('logout') }}">
@@ -73,11 +73,11 @@
         </a></li>
         
         @else
-        <li>
+        
             <a class="btn text-base mr-4 premium" href="/billing">
-                Hazte Premium
+               Premium
             </a>
-        </li>
+      
         @endif
         <li>
         <form class="text-center items-center" method="POST" action="{{ route('logout') }}">
@@ -91,11 +91,11 @@
         </li>
         @endauth
         @guest
-        <li>
+        
             <a class="btn text-base mr-4 premium" href="/billing">
-              Hazte Premium
+               Premium
           </a>
-        </li>
+        
           @endguest
       </ul>
     </div> 

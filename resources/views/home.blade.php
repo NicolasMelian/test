@@ -60,10 +60,11 @@
 </div>
 </div>
 
-<x-sectionDescription/>
+<x-sectionDescription />
 
 
-<x-explication/>
+<x-explication />
+
 
 <!-- mostrar si el usuario no esta suscripto -->
 @guest
@@ -75,6 +76,8 @@
 <x-priceSection/>
 @endif
 @endauth
+
+<x-questions />
 <x-footer/>
 
 

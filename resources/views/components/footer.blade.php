@@ -14,6 +14,7 @@
         <header class="footer-title">Legal</header> 
         <a class="link link-hover" href="/terminos-y-condiciones">Terminos y condiciones</a>
         <a class="link link-hover" href="/politica-de-privacidad">Política de privacidad</a>
+        <a class="link link-hover" href="/politica-de-reembolso">Política de reembolso</a>
       </nav>
     </footer>
   </div>

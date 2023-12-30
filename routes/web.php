@@ -36,5 +36,9 @@ Route::get('/terminos-y-condiciones', function () {
     return view('/terminosYCondiciones');
 });
 
+Route::get('/politica-de-reembolso', function () {
+    return view('/politicaDeReembolso');
+});
+
 
 require __DIR__.'/auth.php';

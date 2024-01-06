@@ -36,14 +36,14 @@
           </a>
         
           @endif
-          <li>
+          <li class="justify-center mr-4">
           <form class="text-center items-center" method="POST" action="{{ route('logout') }}">
               @csrf
-              <li class="justify-center mr-4"><a class="text-base" href="{{ route('logout') }}"
+              <a class="text-base" href="{{ route('logout') }}"
                       onclick="event.preventDefault();
                                   this.closest('form').submit();">
                   Cerrar Sesión
-          </a></li>
+          </a>
           </form>
           </li>
           @endauth
@@ -79,14 +79,14 @@
             </a>
       
         @endif
-        <li>
+        <li class="mr-4 text-base">
         <form class="text-center items-center" method="POST" action="{{ route('logout') }}">
             @csrf
-            <li class="mr-4 text-base"><a href="{{ route('logout') }}"
+            <a href="{{ route('logout') }}"
                     onclick="event.preventDefault();
                                 this.closest('form').submit();">
                 Cerrar Sesión
-        </a></li>
+        </a>
         </form>
         </li>
         @endauth

@@ -3,20 +3,44 @@
 namespace Laravel\Paddle\Components;
 
 use Illuminate\View\Component;
-use Laravel\Paddle\Checkout as PaddleCheckout;
 
 class Checkout extends Component
 {
     /**
-     * Initialise the Checkout component class.
+     * The identifier for the Paddle checkout script and container.
+     *
+     * @var string
      */
-    public function __construct(
-        protected PaddleCheckout $checkout,
-        public string $id = 'paddle-checkout-container',
-        protected int $height = 366,
-        protected array $settings = []
-    ) {
-        //
+    public $id;
+
+    /**
+     * The initial height of the inline checkout.
+     *
+     * @var int
+     */
+    public $height;
+
+    /**
+     * The options for the inline Paddle Checkout script.
+     *
+     * @var array
+     */
+    protected $options;
+
+    /**
+     * Initialise the Checkout component class.
+     *
+     * @param  string  $override
+     * @param  string  $id
+     * @param  int  $height
+     * @param  array  $options
+     * @return void
+     */
+    public function __construct(string $override = '', $id = 'paddle-checkout', int $height = 366, array $options = [])
+    {
+        $this->id = $id;
+        $this->height = $height;
+        $this->options = $override ? ['override' => $override] : $options;
     }
 
     /**
@@ -36,13 +60,11 @@ class Checkout extends Component
      */
     public function options()
     {
-        $options = $this->checkout->options();
-
-        $options['settings']['frameTarget'] = $this->id;
-        $options['settings']['frameInitialHeight'] = $this->height;
-
-        $options['settings'] = array_filter(array_merge($options['settings'], $this->settings));
-
-        return $options;
+        return array_merge([
+            'method' => 'inline',
+            'frameTarget' => $this->id,
+            'frameInitialHeight' => $this->height,
+            'frameStyle' => 'width: 100%; background-color: transparent; border: none;',
+        ], $this->options);
     }
 }

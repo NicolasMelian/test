@@ -83,7 +83,7 @@
                     <error-messages :errors="errors" v-if="errors.length > 0" />
 
                     <!-- Pending -->
-                    <div v-if="['pending'].includes($page.props.state)">
+                    <div v-if="['pending', 'hasHighRiskPayment'].includes($page.props.state)">
                         <div class="flex items-center">
                             <section-heading>
                                 {{ __('Subscription Pending') }}
@@ -231,8 +231,17 @@
 
                         <div class="mt-3">
                             <div class="p-6 bg-white sm:rounded-lg shadow-sm">
-                                <div class="max-w-2xl text-sm text-gray-600">
-                                    {{ __('Change the current payment method attached to your subscription.') }}
+                                <div class="max-w-2xl text-sm text-gray-600" v-if="$page.props.paymentMethod == 'card'"
+                                    v-html="__('Your current payment method is a credit card ending in :lastFour that expires on :expiration.', {
+                                        lastFour: '<span class=\'font-semibold\'>'+$page.props.cardLastFour+'</span>',
+                                        expiration: '<span class=\'font-semibold\'>'+$page.props.cardExpirationDate+'</span>'
+                                    })">
+                                </div>
+
+                                <div class="max-w-2xl text-sm text-gray-600" v-if="$page.props.paymentMethod == 'paypal'"
+                                     v-html="__('Your current payment method is :paypal.', {
+                                         paypal: '<span class=\'font-semibold\'>PayPal</span>'
+                                     })">
                                 </div>
 
                                 <spark-button class="mt-4" @click.native="updatePaymentMethod">
@@ -242,7 +251,7 @@
                         </div>
                     </div>
 
-                    <!-- On Cancelation Grace Period -->
+                    <!-- On Grace Period / Subscription Paused -->
                     <div v-if="$page.props.state == 'onGracePeriod'">
                         <!-- Resume Subscription -->
                         <section-heading>
@@ -379,14 +388,11 @@
         props: [
             'billableId',
             'billableType',
-            'paddleSellerId',
+            'paddleVendorId',
             'plan',
-            'pwAuth',
-            'pwCustomer',
             'seatName',
             'monthlyPlans',
             'yearlyPlans',
-            'state'
         ],
 
         data() {
@@ -400,8 +406,6 @@
                 confirmArguments: [],
                 confirmText: '',
                 showModal: false,
-
-                updatingPaymentMethod: false,
             };
         },
 
@@ -423,48 +427,9 @@
          * Initialize the component.
          */
         mounted() {
-            let setupOptions = {
-                seller: this.paddleSellerId
-            };
-
-            if (this.$page.props.pwAuth) {
-                setupOptions.pwAuth = this.$page.props.pwAuth;
-
-                if (this.$page.props.pwCustomer) {
-                    setupOptions.pwAuth = this.$page.props.pwCustomer;
-                }
-            }
-
-            let that = this;
-
-            setupOptions.eventCallback = function (event) {
-                switch (event.name) {
-                    case "checkout.closed":
-                        window.history.pushState({}, document.title, window.location.pathname);
-
-                        that.updatingPaymentMethod = false;
-
-                        break;
-                    case "checkout.completed":
-                        if (that.updatingPaymentMethod) {
-                            that.updatingPaymentMethod = false;
-
-                            break;
-                        }
-
-                        that.$page.props.state = 'pending';
-
-                        window.history.pushState({}, document.title, window.location.pathname);
-
-                        that.request('POST', '/spark/pending-checkout', {
-                            checkout_id: event.data.id
-                        });
-
-                        break;
-                }
-            };
-
-            Paddle.Setup(setupOptions);
+            Paddle.Setup({
+                vendor: this.paddleVendorId
+            });
 
             if (this.$page.props.sandbox) {
                 Paddle.Environment.set('sandbox');
@@ -515,14 +480,20 @@
                 this.request('POST', '/spark/subscription', {
                     plan: plan.id
                 }).then(response => {
-                    const checkout = response.data.checkout;
-
                     Paddle.Checkout.open({
-                        items: checkout.items,
-                        customer: checkout.customer,
-                        customData: checkout.custom_data,
-                        settings: {
-                            allowLogout: false,
+                        override: response.data.link,
+                        disableLogout: true,
+                        successCallback: response => {
+                            this.$page.props.state = 'pending';
+
+                            window.history.pushState({}, document.title, window.location.pathname);
+
+                            this.request('POST', '/spark/pending-checkout', {
+                                checkout_id: response.checkout.id
+                            });
+                        },
+                        closeCallback: () => {
+                            window.history.pushState({}, document.title, window.location.pathname);
                         }
                     });
                 });
@@ -548,16 +519,12 @@
                 Paddle.Spinner.show();
 
                 this.request('PUT', '/spark/subscription/payment-method').then(response => {
-                    const transactionId = response.data.transaction_id;
-
-                    this.updatingPaymentMethod = true;
-
                     Paddle.Checkout.open({
-                        transactionId: transactionId,
-                        settings: {
-                            allowLogout: false,
+                        override: response.data.link,
+                        successCallback: response => {
+                            this.reloadData();
                         }
-                    });
+                    })
                 });
             },
 

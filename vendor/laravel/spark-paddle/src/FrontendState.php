@@ -5,9 +5,13 @@ namespace Spark;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Laravel\Paddle\Cashier;
-use Laravel\Paddle\Subscription;
-use Laravel\Paddle\Transaction;
+use Laravel\Paddle\Receipt;
+use Money\Currencies\ISOCurrencies;
+use Money\Currency;
+use Money\Parser\IntlLocalizedDecimalParser;
+use NumberFormatter;
 
 class FrontendState
 {
@@ -24,8 +28,8 @@ class FrontendState
 
         $plans = static::getPlans($type, $billable);
 
-        $plan = $subscription && $subscription->valid()
-            ? $plans->firstWhere('id', $subscription->items()->first()->price_id)
+        $plan = $subscription && $subscription->active()
+            ? $plans->firstWhere('id', $subscription->paddle_plan)
             : null;
 
         $lastPayment = self::subscriptionIsActive($subscription) || self::subscriptionIsPastDue($subscription)
@@ -54,20 +58,20 @@ class FrontendState
             'billableName' => $billable->name,
             'billableType' => $type,
             'brandColor' => $this->brandColor(),
+            'cardBrand' => static::cardBrand($subscription),
+            'cardExpirationDate' => static::cardExpiration($subscription),
+            'cardLastFour' => static::cardLastFour($subscription),
             'dashboardUrl' => static::dashboardUrl(),
             'defaultInterval' => config('spark.billables.'.$type.'.default_interval', 'monthly'),
-            'genericTrialEndsAt' => $billable->onGenericTrial()
-                ? $billable->customer->trial_ends_at->translatedFormat(config('spark.date_format', 'F j, Y'))
-                : null,
+            'genericTrialEndsAt' => $billable->onGenericTrial() ? $billable->customer->trial_ends_at->translatedFormat(config('spark.date_format', 'F j, Y')) : null,
             'lastPayment' => $lastPayment,
             'message' => request('message', ''),
             'monthlyPlans' => $plans->where('interval', 'monthly')->where('active', true)->values(),
             'nextPayment' => $nextPayment,
-            'paddleSellerId' => (int) config('cashier.seller_id'),
+            'paddleVendorId' => (int) config('cashier.vendor_id'),
+            'paymentMethod' => self::subscriptionIsActive($subscription) || self::subscriptionIsPastDue($subscription) ? $subscription->paymentMethod() : null,
             'plan' => $plan,
-            'pwAuth' => config('cashier.retain_key'),
-            'pwCustomer' => ($customer = $user->customer) ? $customer->paddle_id : null,
-            'receipts' => static::transactions($billable),
+            'receipts' => static::receipts($billable),
             'seatName' => Spark::seatName($type),
             'state' => static::state($billable, $subscription),
             'termsUrl' => $this->termsUrl(),
@@ -116,16 +120,32 @@ class FrontendState
     {
         $plans = Spark::plans($type);
 
-        $previews = $this->getPricePreviews($plans);
+        $paddlePlans = $this->getProductPrices($plans);
 
-        /** @var \Laravel\Paddle\PricePreview $preview */
-        foreach ($previews as $preview) {
-            if ($sparkPlan = $plans->where('id', $preview->price['id'])->first()) {
-                $sparkPlan->price = $preview->total();
+        foreach ($paddlePlans as $plan) {
+            if ($sparkPlan = $plans->where('id', $plan->product_id)->first()) {
+                $priceKey = $plan->vendor_set_prices_included_tax ? 'gross' : 'net';
 
-                $sparkPlan->priceIncludesVat = $preview->price['tax_mode'] === 'internal';
+                $price = static::parseAmount(
+                    (string) $plan->recurringPrice()->{$priceKey},
+                    $plan->currency
+                );
 
-                $sparkPlan->currency = $preview->currency()->getCode();
+                $formattedPrice = Cashier::formatAmount((int) $price, $plan->currency);
+
+                if (Str::endsWith($formattedPrice, '.00')) {
+                    $formattedPrice = substr($formattedPrice, 0, -3);
+                }
+
+                if (Str::endsWith($formattedPrice, '.0')) {
+                    $formattedPrice = substr($formattedPrice, 0, -2);
+                }
+
+                $sparkPlan->price = $formattedPrice;
+
+                $sparkPlan->priceIncludesVat = $plan->vendor_set_prices_included_tax;
+
+                $sparkPlan->currency = $plan->currency;
             }
         }
 
@@ -133,30 +153,35 @@ class FrontendState
     }
 
     /**
-     * Get the price previews from Paddle.
+     * Get the product prices from Paddle.
      *
      * @param  \Illuminate\Support\Collection  $plans
      * @return \Illuminate\Support\Collection
      */
-    protected function getPricePreviews($plans)
+    protected function getProductPrices($plans)
     {
-        return Cashier::previewPrices($plans->map->id->toArray(), [
-            'customer_ip_address' => request()->ip(),
+        return Cashier::productPrices($plans->map->id->toArray(), [
+            'customer_ip' => request()->ip(),
         ]);
     }
 
     /**
      * Get the current subscription state.
      *
+     * @param  \Laravel\Paddle\Subscription  $subscription
      * @return string
      */
-    protected static function state(Model $billable, ?Subscription $subscription)
+    protected static function state(Model $billable, $subscription)
     {
         if (static::pendingCheckout($billable, $subscription)) {
             return 'pending';
         }
 
-        if ($subscription && $subscription->onGracePeriod()) {
+        if (static::hasHighRiskPayment($billable)) {
+            return 'hasHighRiskPayment';
+        }
+
+        if ($subscription && $subscription->onPausedGracePeriod()) {
             return 'onGracePeriod';
         }
 
@@ -174,9 +199,10 @@ class FrontendState
     /**
      * Determine if the subscription is in an "active" state.
      *
+     * @param  \Laravel\Paddle\Subscription  $subscription
      * @return bool
      */
-    protected static function subscriptionIsActive(?Subscription $subscription)
+    protected static function subscriptionIsActive($subscription)
     {
         return $subscription &&
                $subscription->active() &&
@@ -186,9 +212,10 @@ class FrontendState
     /**
      * Determine if the subscription is in a "past_due" state.
      *
+     * @param  \Laravel\Paddle\Subscription  $subscription
      * @return bool
      */
-    protected static function subscriptionIsPastDue(?Subscription $subscription)
+    protected static function subscriptionIsPastDue($subscription)
     {
         return $subscription &&
                $subscription->pastDue();
@@ -197,9 +224,10 @@ class FrontendState
     /**
      * Determine if we are waiting for webhooks to arrive.
      *
+     * @param  \Laravel\Paddle\Subscription  $subscription
      * @return bool
      */
-    protected static function pendingCheckout(Model $billable, ?Subscription $subscription)
+    protected static function pendingCheckout(Model $billable, $subscription)
     {
         if (self::subscriptionIsActive($subscription) || self::subscriptionIsPastDue($subscription)) {
             $billable->customer->update([
@@ -215,26 +243,93 @@ class FrontendState
     }
 
     /**
-     * List all transactions of the given billable.
+     * Determine if the billable has a high risk payment and is under verification.
+     *
+     * @return bool
+     */
+    protected static function hasHighRiskPayment(Model $billable)
+    {
+        return
+            $billable->customer &&
+            $billable->customer->has_high_risk_payment;
+    }
+
+    /**
+     * List all receipts of the given billable.
      *
      * @return array
      */
-    protected static function transactions(Model $billable)
+    protected static function receipts(Model $billable)
     {
-        return $billable->transactions()
-            ->where('total', '>', 0)
+        return $billable->receipts()
+            ->where('amount', '>', 0)
             ->paginate(10)
             ->withQueryString()
-            ->through(fn (Transaction $transaction) => [
-                'id' => $transaction->id,
-                'total' => $transaction->total(),
-                'billed_at' => $transaction->billed_at->translatedFormat(config('spark.date_format', 'F j, Y')),
-                'receipt_url' => route('spark.receipts.download', [
-                    $billable->sparkConfiguration()['type'],
-                    $billable->id,
-                    $transaction->id,
-                ]),
-            ]);
+            ->through(function (Receipt $receipt) {
+                $amount = static::parseAmount(
+                    (string) $receipt->amount,
+                    $receipt->currency
+                );
+
+                $receipt->amount = Cashier::formatAmount($amount, $receipt->currency);
+
+                $receipt = $receipt->toArray();
+
+                $receipt['paid_at'] = Carbon::make($receipt['paid_at'])->translatedFormat(config('spark.date_format', 'F j, Y'));
+
+                return $receipt;
+            });
+    }
+
+    /**
+     * Get the card brand.
+     *
+     * @param  \Laravel\Paddle\Subscription  $subscription
+     * @return string|null
+     */
+    protected static function cardBrand($subscription)
+    {
+        if (! self::subscriptionIsActive($subscription) && ! self::subscriptionIsPastDue($subscription)) {
+            return;
+        }
+
+        return $subscription->paymentMethod() == 'card'
+            ? $subscription->cardBrand()
+            : 'paypal';
+    }
+
+    /**
+     * Get the card expiration.
+     *
+     * @param  \Laravel\Paddle\Subscription  $subscription
+     * @return string|null
+     */
+    protected static function cardExpiration($subscription)
+    {
+        if (! self::subscriptionIsActive($subscription) && ! self::subscriptionIsPastDue($subscription)) {
+            return;
+        }
+
+        return $subscription->paymentMethod() == 'card'
+            ? $subscription->cardExpirationDate()
+            : '';
+    }
+
+    /**
+     * Get the card last 4 digits.
+     *
+     * @param  \Laravel\Paddle\Subscription  $subscription
+     * @return string|null
+     */
+    protected static function cardLastFour($subscription)
+    {
+        if (! self::subscriptionIsActive($subscription) && ! self::subscriptionIsPastDue($subscription)) {
+            return;
+        }
+
+        return $subscription->paymentMethod() == 'card'
+            ? $subscription->cardLastFour()
+            : '';
     }
 
     /**
@@ -263,5 +358,25 @@ class FrontendState
         }
 
         return app('router')->has('terms.show') ? route('terms.show') : null;
+    }
+
+    /**
+     * Parse the given amount from Paddle.
+     *
+     * @param  string  $amount
+     * @param  string  $currency
+     * @return string
+     */
+    protected static function parseAmount($amount, $currency)
+    {
+        $currencies = new ISOCurrencies();
+
+        $numberFormatter = new NumberFormatter('en', NumberFormatter::DECIMAL);
+
+        $moneyParser = new IntlLocalizedDecimalParser($numberFormatter, $currencies);
+
+        $money = $moneyParser->parse($amount, new Currency(strtoupper($currency ?? config('cashier.currency'))));
+
+        return $money->getAmount();
     }
 }

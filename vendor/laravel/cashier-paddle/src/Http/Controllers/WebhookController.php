@@ -7,15 +7,15 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Str;
 use Laravel\Paddle\Cashier;
-use Laravel\Paddle\Events\CustomerUpdated;
-use Laravel\Paddle\Events\SubscriptionCanceled;
+use Laravel\Paddle\Events\PaymentSucceeded;
+use Laravel\Paddle\Events\SubscriptionCancelled;
 use Laravel\Paddle\Events\SubscriptionCreated;
-use Laravel\Paddle\Events\SubscriptionPaused;
+use Laravel\Paddle\Events\SubscriptionPaymentFailed;
+use Laravel\Paddle\Events\SubscriptionPaymentSucceeded;
 use Laravel\Paddle\Events\SubscriptionUpdated;
-use Laravel\Paddle\Events\TransactionCompleted;
-use Laravel\Paddle\Events\TransactionUpdated;
 use Laravel\Paddle\Events\WebhookHandled;
 use Laravel\Paddle\Events\WebhookReceived;
+use Laravel\Paddle\Exceptions\InvalidPassthroughPayload;
 use Laravel\Paddle\Http\Middleware\VerifyWebhookSignature;
 use Laravel\Paddle\Subscription;
 use Symfony\Component\HttpFoundation\Response;
@@ -29,7 +29,7 @@ class WebhookController extends Controller
      */
     public function __construct()
     {
-        if (config('cashier.webhook_secret')) {
+        if (config('cashier.public_key')) {
             $this->middleware(VerifyWebhookSignature::class);
         }
     }
@@ -44,12 +44,20 @@ class WebhookController extends Controller
     {
         $payload = $request->all();
 
-        $method = 'handle'.Str::studly(Str::replace('.', ' ', $payload['event_type']));
+        if (! isset($payload['alert_name'])) {
+            return new Response();
+        }
+
+        $method = 'handle'.Str::studly($payload['alert_name']);
 
         WebhookReceived::dispatch($payload);
 
         if (method_exists($this, $method)) {
-            $this->{$method}($payload);
+            try {
+                $this->{$method}($payload);
+            } catch (InvalidPassthroughPayload $e) {
+                return new Response('Webhook Skipped');
+            }
 
             WebhookHandled::dispatch($payload);
 
@@ -60,82 +68,77 @@ class WebhookController extends Controller
     }
 
     /**
-     * Handle customer updated.
+     * Handle one-time payment succeeded.
      *
      * @param  array  $payload
      * @return void
      */
-    protected function handleCustomerUpdated(array $payload)
+    protected function handlePaymentSucceeded(array $payload)
     {
-        $data = $payload['data'];
-
-        if (! $customer = $this->findCustomer($data['id'])) {
+        if ($this->receiptExists($payload['order_id'])) {
             return;
         }
 
-        $customer->update([
-            'name' => $data['name'],
-            'email' => $data['email'],
+        $customer = $this->findOrCreateCustomer($payload['passthrough']);
+
+        $receipt = $customer->receipts()->create([
+            'checkout_id' => $payload['checkout_id'],
+            'order_id' => $payload['order_id'],
+            'amount' => $payload['sale_gross'],
+            'tax' => $payload['payment_tax'],
+            'currency' => $payload['currency'],
+            'quantity' => (int) $payload['quantity'],
+            'receipt_url' => $payload['receipt_url'],
+            'paid_at' => Carbon::createFromFormat('Y-m-d H:i:s', $payload['event_time'], 'UTC'),
         ]);
 
-        CustomerUpdated::dispatch($customer->billable, $customer, $payload);
+        PaymentSucceeded::dispatch($customer, $receipt, $payload);
     }
 
     /**
-     * Handle transaction completed.
+     * Handle subscription payment succeeded.
      *
      * @param  array  $payload
      * @return void
      */
-    protected function handleTransactionCompleted(array $payload)
+    protected function handleSubscriptionPaymentSucceeded(array $payload)
     {
-        $data = $payload['data'];
-
-        if ($this->transactionExists($data['id'])) {
+        if ($this->receiptExists($payload['order_id'])) {
             return;
         }
 
-        if (! $billable = $this->findBillable($data['customer_id'])) {
-            return;
+        if ($subscription = $this->findSubscription($payload['subscription_id'])) {
+            $billable = $subscription->billable;
+        } else {
+            $billable = $this->findOrCreateCustomer($payload['passthrough']);
         }
 
-        $transaction = $billable->transactions()->create([
-            'paddle_id' => $data['id'],
-            'paddle_subscription_id' => $data['subscription_id'],
-            'invoice_number' => $data['invoice_number'],
-            'status' => $data['status'],
-            'total' => $data['details']['totals']['total'],
-            'tax' => $data['details']['totals']['tax'],
-            'currency' => $data['currency_code'],
-            'billed_at' => Carbon::parse($data['billed_at'], 'UTC'),
+        $receipt = $billable->receipts()->create([
+            'paddle_subscription_id' => $payload['subscription_id'],
+            'checkout_id' => $payload['checkout_id'],
+            'order_id' => $payload['order_id'],
+            'amount' => $payload['sale_gross'],
+            'tax' => $payload['payment_tax'],
+            'currency' => $payload['currency'],
+            'quantity' => (int) $payload['quantity'],
+            'receipt_url' => $payload['receipt_url'],
+            'paid_at' => Carbon::createFromFormat('Y-m-d H:i:s', $payload['event_time'], 'UTC'),
         ]);
 
-        TransactionCompleted::dispatch($billable, $transaction, $payload);
+        SubscriptionPaymentSucceeded::dispatch($billable, $receipt, $payload);
     }
 
     /**
-     * Handle transaction updated.
+     * Handle subscription payment failed.
      *
      * @param  array  $payload
      * @return void
      */
-    protected function handleTransactionUpdated(array $payload)
+    protected function handleSubscriptionPaymentFailed(array $payload)
     {
-        $data = $payload['data'];
-
-        if (! $transaction = $this->findTransaction($data['id'])) {
-            return;
+        if ($subscription = $this->findSubscription($payload['subscription_id'])) {
+            SubscriptionPaymentFailed::dispatch($subscription->billable, $payload);
         }
-
-        $transaction->update([
-            'invoice_number' => $data['invoice_number'],
-            'status' => $data['status'],
-            'total' => $data['details']['totals']['total'],
-            'tax' => $data['details']['totals']['tax'],
-            'billed_at' => Carbon::parse($data['billed_at'], 'UTC'),
-        ]);
-
-        TransactionUpdated::dispatch($transaction->billable, $transaction, $payload);
     }
 
     /**
@@ -143,40 +146,37 @@ class WebhookController extends Controller
      *
      * @param  array  $payload
      * @return void
+     *
+     * @throws \Laravel\Paddle\Exceptions\InvalidPassthroughPayload
      */
     protected function handleSubscriptionCreated(array $payload)
     {
-        $data = $payload['data'];
+        $passthrough = isset($payload['passthrough']) ? json_decode($payload['passthrough'], true) : null;
 
-        if ($this->subscriptionExists($data['id'])) {
+        if (! isset($passthrough) || ! is_array($passthrough) || ! isset($passthrough['subscription_name'])) {
+            throw new InvalidPassthroughPayload;
+        }
+
+        if ($this->subscriptionExists($payload['subscription_id'])) {
             return;
         }
 
-        if (! $billable = $this->findBillable($data['customer_id'])) {
-            return;
-        }
+        $customer = $this->findOrCreateCustomer($payload['passthrough']);
 
-        $subscription = $billable->subscriptions()->create([
-            'type' => $data['custom_data']['subscription_type'] ?? Subscription::DEFAULT_TYPE,
-            'paddle_id' => $data['id'],
-            'status' => $data['status'],
-            'trial_ends_at' => $data['status'] === Subscription::STATUS_TRIALING
-                ? Carbon::parse($data['next_billed_at'], 'UTC')
-                : null,
+        $trialEndsAt = $payload['status'] === Subscription::STATUS_TRIALING
+            ? Carbon::createFromFormat('Y-m-d', $payload['next_bill_date'], 'UTC')->startOfDay()
+            : null;
+
+        $subscription = $customer->subscriptions()->create([
+            'name' => $passthrough['subscription_name'],
+            'paddle_id' => $payload['subscription_id'],
+            'paddle_plan' => $payload['subscription_plan_id'],
+            'paddle_status' => $payload['status'],
+            'quantity' => $payload['quantity'],
+            'trial_ends_at' => $trialEndsAt,
         ]);
 
-        foreach ($data['items'] as $item) {
-            $subscription->items()->create([
-                'product_id' => $item['price']['product_id'],
-                'price_id' => $item['price']['id'],
-                'status' => $item['status'],
-                'quantity' => $item['quantity'] ?? 1,
-            ]);
-        }
-
-        $billable->customer->update(['trial_ends_at' => null]);
-
-        SubscriptionCreated::dispatch($billable, $subscription, $payload);
+        SubscriptionCreated::dispatch($customer, $subscription, $payload);
     }
 
     /**
@@ -187,132 +187,92 @@ class WebhookController extends Controller
      */
     protected function handleSubscriptionUpdated(array $payload)
     {
-        $data = $payload['data'];
-
-        if (! $subscription = $this->findSubscription($data['id'])) {
+        if (! $subscription = $this->findSubscription($payload['subscription_id'])) {
             return;
         }
 
-        $subscription->status = $data['status'];
-
-        if ($data['status'] === Subscription::STATUS_TRIALING) {
-            $subscription->trial_ends_at = Carbon::parse($data['next_billed_at'], 'UTC');
-        } else {
-            $subscription->trial_ends_at = null;
+        // Plan...
+        if (isset($payload['subscription_plan_id'])) {
+            $subscription->paddle_plan = $payload['subscription_plan_id'];
         }
 
-        if (isset($data['paused_at'])) {
-            $subscription->paused_at = Carbon::parse($data['paused_at'], 'UTC');
-        } elseif (isset($data['scheduled_change']) && $data['scheduled_change']['action'] === 'pause') {
-            $subscription->paused_at = Carbon::parse($data['scheduled_change']['effective_at'], 'UTC');
-        } else {
-            $subscription->paused_at = null;
+        // Status...
+        if (isset($payload['status'])) {
+            $subscription->paddle_status = $payload['status'];
         }
 
-        if (isset($data['canceled_at'])) {
-            $subscription->ends_at = Carbon::parse($data['canceled_at'], 'UTC');
-        } elseif (isset($data['scheduled_change']) && $data['scheduled_change']['action'] === 'cancel') {
-            $subscription->ends_at = Carbon::parse($data['scheduled_change']['effective_at'], 'UTC');
+        // Quantity...
+        if (isset($payload['new_quantity'])) {
+            $subscription->quantity = $payload['new_quantity'];
+        }
+
+        // Paused...
+        if (isset($payload['paused_from'])) {
+            $subscription->paused_from = Carbon::createFromFormat('Y-m-d H:i:s', $payload['paused_from'], 'UTC');
         } else {
-            $subscription->ends_at = null;
+            $subscription->paused_from = null;
         }
 
         $subscription->save();
-
-        $prices = [];
-
-        foreach ($data['items'] as $item) {
-            $prices[] = $item['price']['id'];
-
-            $subscription->items()->updateOrCreate([
-                'price_id' => $item['price']['id'],
-            ], [
-                'product_id' => $item['price']['product_id'],
-                'status' => $item['status'],
-                'quantity' => $item['quantity'] ?? 1,
-            ]);
-        }
-
-        // Delete items that aren't attached to the subscription anymore...
-        $subscription->items()->whereNotIn('price_id', $prices)->delete();
 
         SubscriptionUpdated::dispatch($subscription, $payload);
     }
 
     /**
-     * Handle subscription paused.
+     * Handle subscription cancelled.
      *
      * @param  array  $payload
      * @return void
      */
-    protected function handleSubscriptionPaused(array $payload)
+    protected function handleSubscriptionCancelled(array $payload)
     {
-        $data = $payload['data'];
-
-        if (! $subscription = $this->findSubscription($data['id'])) {
+        if (! $subscription = $this->findSubscription($payload['subscription_id'])) {
             return;
         }
 
-        $subscription->status = $data['status'];
-
-        $subscription->paused_at = Carbon::parse($data['paused_at'], 'UTC');
-
-        $subscription->ends_at = null;
-
-        $subscription->save();
-
-        SubscriptionPaused::dispatch($subscription, $payload);
-    }
-
-    /**
-     * Handle subscription canceled.
-     *
-     * @param  array  $payload
-     * @return void
-     */
-    protected function handleSubscriptionCanceled(array $payload)
-    {
-        $data = $payload['data'];
-
-        if (! $subscription = $this->findSubscription($data['id'])) {
-            return;
+        // Cancellation date...
+        if (is_null($subscription->ends_at)) {
+            $subscription->ends_at = $subscription->onTrial()
+                ? $subscription->trial_ends_at
+                : Carbon::createFromFormat('Y-m-d', $payload['cancellation_effective_date'], 'UTC')->startOfDay();
         }
 
-        $subscription->status = $data['status'];
+        // Status...
+        if (isset($payload['status'])) {
+            $subscription->paddle_status = $payload['status'];
+        }
 
-        $subscription->ends_at = Carbon::parse($data['canceled_at'], 'UTC');
-
-        $subscription->paused_at = null;
+        $subscription->paused_from = null;
 
         $subscription->save();
 
-        SubscriptionCanceled::dispatch($subscription, $payload);
+        SubscriptionCancelled::dispatch($subscription, $payload);
     }
 
     /**
-     * Get the customer instance by its Paddle customer ID.
+     * Find or create a customer based on the passthrough values and return the billable model.
      *
-     * @param  string  $customerId
-     * @return \Laravel\Paddle\Billable|null
-     */
-    protected function findBillable($customerId)
-    {
-        return Cashier::findBillable($customerId);
-    }
-
-    /**
-     * Find the first customer matching a Paddle customer ID.
+     * @param  string  $passthrough
+     * @return \Laravel\Paddle\Billable
      *
-     * @param  string  $customerId
-     * @return \Laravel\Paddle\Customer|null
+     * @throws \Laravel\Paddle\Exceptions\InvalidPassthroughPayload
      */
-    protected function findCustomer(string $customerId)
+    protected function findOrCreateCustomer(string $passthrough)
     {
-        return Cashier::$customerModel::firstWhere('paddle_id', $customerId);
+        $passthrough = json_decode($passthrough, true);
+
+        if (! is_array($passthrough) || ! isset($passthrough['billable_id'], $passthrough['billable_type'])) {
+            throw new InvalidPassthroughPayload;
+        }
+
+        return Cashier::$customerModel::firstOrCreate([
+            'billable_id' => $passthrough['billable_id'],
+            'billable_type' => $passthrough['billable_type'],
+        ])->billable;
     }
 
     /**
-     * Find the first subscription matching a Paddle subscription ID.
+     * Find the first subscription matching a Paddle subscription id.
      *
      * @param  string  $subscriptionId
      * @return \Laravel\Paddle\Subscription|null
@@ -334,24 +294,13 @@ class WebhookController extends Controller
     }
 
     /**
-     * Find the first transaction matching a Paddle transaction ID.
+     * Determine if a receipt with a given Order ID already exists.
      *
-     * @param  string  $transactionId
-     * @return \Laravel\Paddle\Transaction|null
-     */
-    protected function findTransaction(string $transactionId)
-    {
-        return Cashier::$transactionModel::firstWhere('paddle_id', $transactionId);
-    }
-
-    /**
-     * Determine if a transaction with a given ID already exists.
-     *
-     * @param  string  $transactionId
+     * @param  string  $orderId
      * @return bool
      */
-    protected function transactionExists(string $transactionId)
+    protected function receiptExists(string $orderId)
     {
-        return Cashier::$transactionModel::where('paddle_id', $transactionId)->count() > 0;
+        return Cashier::$receiptModel::where('order_id', $orderId)->count() > 0;
     }
 }

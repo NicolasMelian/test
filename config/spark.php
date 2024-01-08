@@ -101,8 +101,8 @@ return [
                 [
                     'name' => 'Standard',
                     'short_description' => 'This is a short, human friendly description of the plan.',
-                    'monthly_id' => env('SPARK_STANDARD_MONTHLY_PLAN', 867533),
-                    'yearly_id' => env('SPARK_STANDARD_YEARLY_PLAN', 867534),
+                    'monthly_id' => env('SPARK_STANDARD_MONTHLY_PLAN', 64710),
+                    'yearly_id' => env('SPARK_STANDARD_YEARLY_PLAN', 64711),
                     'features' => [
                         'Feature 1',
                         'Feature 2',

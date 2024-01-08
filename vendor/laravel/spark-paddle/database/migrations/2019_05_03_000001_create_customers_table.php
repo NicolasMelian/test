@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
+class CreateCustomersTable extends Migration
 {
     /**
      * Run the migrations.
@@ -15,11 +15,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('billable_id');
             $table->string('billable_type');
-            $table->string('paddle_id')->unique();
-            $table->string('name');
-            $table->string('email');
             $table->timestamp('trial_ends_at')->nullable();
             $table->string('pending_checkout_id')->nullable();
+            $table->boolean('has_high_risk_payment')->default(false);
             $table->timestamps();
 
             $table->index(['billable_id', 'billable_type']);
@@ -33,4 +31,4 @@ return new class extends Migration
     {
         Schema::dropIfExists('customers');
     }
-};
+}

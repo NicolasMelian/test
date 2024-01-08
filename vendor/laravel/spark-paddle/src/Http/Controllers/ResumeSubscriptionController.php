@@ -10,7 +10,7 @@ class ResumeSubscriptionController
     use RetrievesBillableModels;
 
     /**
-     * Resume the billable's canceled subscription.
+     * Resume the billable's paused subscription.
      *
      * @return void
      */
@@ -26,13 +26,13 @@ class ResumeSubscriptionController
             ]);
         }
 
-        if (! $subscription->onGracePeriod()) {
+        if (! $subscription->onPausedGracePeriod()) {
             throw ValidationException::withMessages([
                 '*' => __('This subscription has expired and cannot be resumed. Please create a new subscription.'),
             ]);
         }
 
-        $subscription->stopCancelation();
+        $subscription->unpause();
 
         if (Spark::chargesPerSeat(request('billableType'))) {
             $subscription->updateQuantity(

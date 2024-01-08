@@ -3,58 +3,18 @@
 namespace Laravel\Paddle\Concerns;
 
 use Laravel\Paddle\Cashier;
-use LogicException;
 
 trait ManagesCustomer
 {
     /**
-     * Create a Paddle customer for the given model.
+     * Create a customer record for the billable model.
      *
+     * @param  array  $attributes
      * @return \Laravel\Paddle\Customer
      */
-    public function createAsCustomer(array $options = [])
+    public function createAsCustomer(array $attributes = [])
     {
-        if ($customer = $this->customer) {
-            return $customer;
-        }
-
-        if (! array_key_exists('name', $options) && $name = $this->paddleName()) {
-            $options['name'] = $name;
-        }
-
-        if (! array_key_exists('email', $options) && $email = $this->paddleEmail()) {
-            $options['email'] = $email;
-        }
-
-        if (! isset($options['email'])) {
-            throw new LogicException('Unable to create Paddle customer without an email.');
-        }
-
-        $trialEndsAt = $options['trial_ends_at'] ?? null;
-
-        unset($options['trial_ends_at']);
-
-        // Attempt to find the customer by email address first...
-        $response = Cashier::api('GET', 'customers', [
-            'status' => 'active,archived',
-            'search' => $options['email'],
-        ])['data'][0] ?? null;
-
-        // If we can't find the customer by email, we'll create them on Paddle...
-        if (is_null($response)) {
-            $response = Cashier::api('POST', 'customers', $options)['data'];
-        }
-
-        $customer = $this->customer()->make();
-        $customer->paddle_id = $response['id'];
-        $customer->name = $response['name'];
-        $customer->email = $response['email'];
-        $customer->trial_ends_at = $trialEndsAt;
-        $customer->save();
-
-        $this->refresh();
-
-        return $customer;
+        return $this->customer()->create($attributes);
     }
 
     /**
@@ -68,29 +28,19 @@ trait ManagesCustomer
     }
 
     /**
-     * Get price previews for a set of price ids for this billable model.
+     * Get prices for a set of product ids for this billable model.
      *
-     * @param  array|string  $items
+     * @param  array|int  $products
      * @param  array  $options
      * @return \Illuminate\Support\Collection
      */
-    public function previewPrices($items, array $options = [])
+    public function productPrices($products, array $options = [])
     {
-        if ($customer = $this->customer) {
-            $options['customer_id'] = $customer->paddle_id;
-        }
+        $options = array_merge([
+            'customer_country' => $this->paddleCountry(),
+        ], $options);
 
-        return Cashier::previewPrices($items, $options);
-    }
-
-    /**
-     * Get the billable model's name to associate with Paddle.
-     *
-     * @return string|null
-     */
-    public function paddleName()
-    {
-        return $this->name;
+        return Cashier::productPrices($products, $options);
     }
 
     /**
@@ -101,5 +51,33 @@ trait ManagesCustomer
     public function paddleEmail()
     {
         return $this->email;
+    }
+
+    /**
+     * Get the billable model's country to associate with Paddle.
+     *
+     * This needs to be a 2 letter code. See the link below for supported countries.
+     *
+     * @return string|null
+     *
+     * @link https://developer.paddle.com/reference/platform-parameters/supported-countries
+     */
+    public function paddleCountry()
+    {
+        //
+    }
+
+    /**
+     * Get the billable model's postcode to associate with Paddle.
+     *
+     * See the link below for countries which require this.
+     *
+     * @return string|null
+     *
+     * @link https://developer.paddle.com/reference/platform-parameters/supported-countries#countries-requiring-postcode
+     */
+    public function paddlePostcode()
+    {
+        //
     }
 }

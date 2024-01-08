@@ -1,15 +1,6 @@
-<?php
-$seller = array_filter([
-    'seller' => (int) config('cashier.seller_id'),
-    'pwAuth' => (int) config('cashier.retain_key'),
-]);
+@php($vendor = ['vendor' => (int) config('cashier.vendor_id')])
 
-if (isset($seller['pwAuth']) && Auth::check() && $customer = Auth::user()->customer) {
-    $seller['pwCustomer'] = ['id' => $customer->paddle_id];
-}
-?>
-
-<script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+<script src="https://cdn.paddle.com/paddle/paddle.js"></script>
 
 @if (config('cashier.sandbox'))
     <script type="text/javascript">
@@ -18,5 +9,5 @@ if (isset($seller['pwAuth']) && Auth::check() && $customer = Auth::user()->custo
 @endif
 
 <script type="text/javascript">
-    Paddle.Setup(@json($seller));
+    Paddle.Setup(@json($vendor));
 </script>

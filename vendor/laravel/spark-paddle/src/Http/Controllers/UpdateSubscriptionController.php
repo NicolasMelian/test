@@ -41,13 +41,9 @@ class UpdateSubscriptionController
         );
 
         try {
-            if (config('spark.prorates')) {
-                $subscription->prorate()
-                    ->swapAndInvoice($request->plan);
-            } else {
-                $subscription->noProrate()
-                    ->swapAndInvoice($request->plan);
-            }
+            $subscription
+                ->setProration(config('spark.prorates'))
+                ->swapAndInvoice($request->plan);
 
             session(['spark.flash.success' => __('Your subscription was successfully updated.')]);
         } catch (PaddleException $e) {

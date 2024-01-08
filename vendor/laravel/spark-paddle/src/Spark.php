@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static \Spark\Plan plan($billableType, $name, $id)
  * @method static bool chargesPerSeat($billableType)
  * @method static bool isAuthorizedToViewBillingPortal($billable, \Illuminate\Http\Request $request)
+ * @method static bool runsMigrations()
  * @method static int seatCount($billableType, $billable)
  * @method static string seatName($billableType)
  * @method static string billableModel($billableType)
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static void chargePerSeat($billableType, $seatName, $callback)
  * @method static void checkPlanEligibilityUsing($type, $callback)
  * @method static void ensurePlanEligibility($billable, $plan)
+ * @method static void ignoreMigrations()
  * @method static void resolveBillableUsing($type, $callback)
  *
  * @see \Spark\SparkManager

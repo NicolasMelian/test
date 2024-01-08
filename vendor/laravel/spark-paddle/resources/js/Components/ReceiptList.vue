@@ -3,12 +3,12 @@
         <div class="bg-white sm:rounded-lg shadow-sm divide-y divide-gray-100">
             <div class="flex items-center px-6 py-4" v-for="receipt in receipts.data" :key="receipt.id">
                 <div class="text-sm w-full">
-                    {{ receipt.billed_at }}
+                    {{ receipt.paid_at }}
                 </div>
 
                 <div class="text-sm w-full">
                     <div class="px-2">
-                        {{ receipt.total }}
+                        {{ receipt.amount }}
                     </div>
                 </div>
 

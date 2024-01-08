@@ -16,14 +16,14 @@ class VerifyBillableIsSubscribed
      * @param  \Illuminate\Http\Request  $request
      * @param  \Closure  $next
      * @param  string  $billableType
-     * @param  string  $price
+     * @param  string  $plan
      * @return \Illuminate\Http\Response
      */
-    public function handle($request, $next, $billableType = null, $price = null)
+    public function handle($request, $next, $billableType = null, $plan = null)
     {
         $billableType = $billableType ?: $this->guessBillableType($billableType);
 
-        if ($this->subscribed($request, $billableType, $price)) {
+        if ($this->subscribed($request, $billableType, $plan)) {
             return $next($request);
         }
 
@@ -45,11 +45,11 @@ class VerifyBillableIsSubscribed
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  string  $type
-     * @param  string  $price
+     * @param  string  $plan
      * @param  bool  $defaultSubscription
      * @return bool
      */
-    protected function subscribed($request, $type, $price)
+    protected function subscribed($request, $type, $plan)
     {
         if (! $billable = Spark::resolveBillable($type, $request)) {
             return false;
@@ -57,11 +57,11 @@ class VerifyBillableIsSubscribed
 
         $subscription = $billable->subscription();
 
-        if ($price && (! $subscription || ! $subscription->hasPrice($price))) {
+        if ($plan && (! $subscription || $subscription->paddle_plan != $plan)) {
             return false;
         }
 
-        return ($subscription && $subscription->valid()) ||
+        return ($subscription && $subscription->active() && ! $subscription->onGracePeriod()) ||
                 $billable->onGenericTrial();
     }
 

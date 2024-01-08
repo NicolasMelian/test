@@ -14,7 +14,7 @@ class UpdatePaymentMethodController
     public function __invoke()
     {
         return response()->json([
-            'transaction_id' => $this->billable()->subscription()->paymentMethodUpdateTransaction()['id'],
+            'link' => $this->billable()->subscription()->updateUrl(),
         ]);
     }
 }

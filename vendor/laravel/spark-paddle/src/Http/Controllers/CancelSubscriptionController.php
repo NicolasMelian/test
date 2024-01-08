@@ -9,7 +9,7 @@ class CancelSubscriptionController
     use RetrievesBillableModels;
 
     /**
-     * Cancel the billable's current subscription.
+     * Pause the billable's current subscription.
      *
      * @return void
      */
@@ -25,8 +25,8 @@ class CancelSubscriptionController
             ]);
         }
 
-        $billable->subscription('default')->cancel();
+        $billable->subscription('default')->pause();
 
-        session(['spark.flash.success' => __('Your subscription has been successfully cancelled. You will still have access until the end of your billing period.')]);
+        session(['spark.flash.success' => __('Your subscription has been successfully cancelled.')]);
     }
 }

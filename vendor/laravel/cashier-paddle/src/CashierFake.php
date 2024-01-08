@@ -6,13 +6,12 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
-use Laravel\Paddle\Events\CustomerUpdated;
-use Laravel\Paddle\Events\SubscriptionCanceled;
+use Laravel\Paddle\Events\PaymentSucceeded;
+use Laravel\Paddle\Events\SubscriptionCancelled;
 use Laravel\Paddle\Events\SubscriptionCreated;
-use Laravel\Paddle\Events\SubscriptionPaused;
+use Laravel\Paddle\Events\SubscriptionPaymentFailed;
+use Laravel\Paddle\Events\SubscriptionPaymentSucceeded;
 use Laravel\Paddle\Events\SubscriptionUpdated;
-use Laravel\Paddle\Events\TransactionCompleted;
-use Laravel\Paddle\Events\TransactionUpdated;
 
 class CashierFake
 {
@@ -32,23 +31,33 @@ class CashierFake
      */
     public function __construct(array $endpoints = [], $events = [])
     {
-        foreach ($endpoints as $endpoint => $response) {
+        foreach (
+            $endpoints = array_merge([
+                'payment/refund',
+                'subscription/users',
+                'subscription/modifiers',
+                'subscription/modifiers/create',
+                'subscription/modifiers/delete',
+            ], $endpoints)
+            as $endpoint => $response
+        ) {
             if (! Arr::isAssoc($endpoints)) {
                 $endpoint = $response;
                 $response = null;
             }
 
-            $this->fakeHttpResponse($endpoint, Arr::wrap($response));
+            $this->fakeHttpResponse($endpoint, array_merge([
+                'success' => true,
+            ], Arr::wrap($response)));
         }
 
         Event::fake(array_merge([
-            CustomerUpdated::class,
-            TransactionCompleted::class,
-            TransactionUpdated::class,
+            PaymentSucceeded::class,
             SubscriptionCreated::class,
             SubscriptionUpdated::class,
-            SubscriptionCanceled::class,
-            SubscriptionPaused::class,
+            SubscriptionCancelled::class,
+            SubscriptionPaymentFailed::class,
+            SubscriptionPaymentSucceeded::class,
         ], Arr::wrap($events)));
     }
 
@@ -66,13 +75,14 @@ class CashierFake
      * Set the successful response for a given endpoint.
      *
      * @param  string  $endpoint
-     * @param  array  $data
+     * @param  mixed  $response
      * @return self
      */
-    public function response(string $endpoint, array $data)
+    public function response(string $endpoint, $response = null)
     {
         $this->fakeHttpResponse($endpoint, [
-            'data' => $data,
+            'success' => true,
+            'response' => $response,
         ]);
 
         return $this;
@@ -91,7 +101,8 @@ class CashierFake
     public function error(string $endpoint, $message = '', $code = 0)
     {
         $this->fakeHttpResponse($endpoint, [
-            'error' => ['detail' => $message],
+            'success' => false,
+            'error' => ['message' => $message, 'code' => $code],
         ]);
 
         return $this;
@@ -111,7 +122,7 @@ class CashierFake
         $this->responses[$endpoint] = $response;
 
         if ($notFaked) {
-            Http::fake([static::getFormattedApiUrl($endpoint) => function () use ($endpoint) {
+            Http::fake([static::getFormattedVendorUrl($endpoint) => function () use ($endpoint) {
                 return $this->responses[$endpoint];
             }]);
         }
@@ -123,42 +134,42 @@ class CashierFake
      * @param  string  $path
      * @return string
      */
-    public static function getFormattedApiUrl(string $path): string
+    public static function getFormattedVendorUrl(string $path): string
     {
-        return Cashier::apiUrl().Str::start($path, '/');
+        return Cashier::vendorsUrl().'/api/2.0'.Str::start($path, '/');
     }
 
     /**
-     * Assert if the CustomerUpdated event was dispatched based on a truth-test callback.
+     * Assert if the PaymentSucceeded event was dispatched based on a truth-test callback.
      *
      * @param  callable|int|null  $callback
      * @return void
      */
-    public static function assertCustomerUpdated($callback = null)
+    public static function assertPaymentSucceeded($callback = null)
     {
-        Event::assertDispatched(CustomerUpdated::class, $callback);
+        Event::assertDispatched(PaymentSucceeded::class, $callback);
     }
 
     /**
-     * Assert if the TransactionCompleted event was dispatched based on a truth-test callback.
+     * Assert if the SubscriptionPaymentSucceeded event was dispatched based on a truth-test callback.
      *
      * @param  callable|int|null  $callback
      * @return void
      */
-    public static function assertTransactionCompleted($callback = null)
+    public static function assertSubscriptionPaymentSucceeded($callback = null)
     {
-        Event::assertDispatched(TransactionCompleted::class, $callback);
+        Event::assertDispatched(SubscriptionPaymentSucceeded::class, $callback);
     }
 
     /**
-     * Assert if the TransactionUpdated event was dispatched based on a truth-test callback.
+     * Assert if the SubscriptionPaymentFailed event was dispatched based on a truth-test callback.
      *
      * @param  callable|int|null  $callback
      * @return void
      */
-    public static function assertTransactionUpdated($callback = null)
+    public static function assertSubscriptionPaymentFailed($callback = null)
     {
-        Event::assertDispatched(TransactionUpdated::class, $callback);
+        Event::assertDispatched(SubscriptionPaymentFailed::class, $callback);
     }
 
     /**
@@ -195,24 +206,13 @@ class CashierFake
     }
 
     /**
-     * Assert if the SubscriptionCanceled event was dispatched based on a truth-test callback.
+     * Assert if the SubscriptionCancelled event was dispatched based on a truth-test callback.
      *
      * @param  callable|int|null  $callback
      * @return void
      */
-    public static function assertSubscriptionCanceled($callback = null)
+    public static function assertSubscriptionCancelled($callback = null)
     {
-        Event::assertDispatched(SubscriptionCanceled::class, $callback);
-    }
-
-    /**
-     * Assert if the SubscriptionPaused event was dispatched based on a truth-test callback.
-     *
-     * @param  callable|int|null  $callback
-     * @return void
-     */
-    public static function assertSubscriptionPaused($callback = null)
-    {
-        Event::assertDispatched(SubscriptionPaused::class, $callback);
+        Event::assertDispatched(SubscriptionCancelled::class, $callback);
     }
 }

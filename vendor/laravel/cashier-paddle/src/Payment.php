@@ -6,10 +6,13 @@ use Carbon\Carbon;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use JsonSerializable;
+use Laravel\Paddle\Concerns\ManagesAmounts;
 use Money\Currency;
 
 class Payment implements Arrayable, Jsonable, JsonSerializable
 {
+    use ManagesAmounts;
+
     /**
      * The amount of the payment.
      *
@@ -27,7 +30,7 @@ class Payment implements Arrayable, Jsonable, JsonSerializable
     /**
      * The payment date.
      *
-     * @var \Carbon\Carbon
+     * @var string
      */
     public $date;
 
@@ -36,7 +39,7 @@ class Payment implements Arrayable, Jsonable, JsonSerializable
      *
      * @param  string  $amount
      * @param  string  $currency
-     * @param  \Carbon\Carbon  $date
+     * @param  string  $date
      * @return void
      */
     public function __construct($amount, $currency, $date)
@@ -53,7 +56,7 @@ class Payment implements Arrayable, Jsonable, JsonSerializable
      */
     public function amount()
     {
-        return Cashier::formatAmount($this->amount, $this->currency);
+        return $this->formatDecimalAmount($this->rawAmount());
     }
 
     /**
@@ -67,7 +70,7 @@ class Payment implements Arrayable, Jsonable, JsonSerializable
     }
 
     /**
-     * Get the currency used for the payment.
+     * Get the used currency for the payment.
      *
      * @return \Money\Currency
      */
@@ -83,7 +86,7 @@ class Payment implements Arrayable, Jsonable, JsonSerializable
      */
     public function date()
     {
-        return $this->date;
+        return Carbon::createFromFormat('Y-m-d', $this->date, 'UTC')->startOfDay();
     }
 
     /**

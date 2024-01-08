@@ -6,7 +6,6 @@
     "Billing Management": "Billing Management",
     "Cancel Subscription": "Cancel Subscription",
     "Change Subscription Plan": "Change Subscription Plan",
-    "Change the current payment method attached to your subscription": "Change the current payment method attached to your subscription",
     "Confirm": "Confirm",
     "Confirm Billing Action": "Confirm Billing Action",
     "Current Subscription Plan": "Current Subscription Plan",
@@ -43,9 +42,11 @@
     "You may cancel your subscription at any time. Once your subscription has been cancelled, you will have the option to resume the subscription until the end of your current billing cycle.": "You may cancel your subscription at any time. Once your subscription has been cancelled, you will have the option to resume the subscription until the end of your current billing cycle.",
     "You are already subscribed.": "You are already subscribed.",
     "You are currently within your free trial period. Your trial will expire on :date. Starting a new subscription will end your trial.": "You are currently within your free trial period. Your trial will expire on :date. Starting a new subscription will end your trial.",
+    "Your current payment method is :paypal.": "Your current payment method is :paypal.",
+    "Your current payment method is a credit card ending in :lastFour that expires on :expiration.": "Your current payment method is a credit card ending in :lastFour that expires on :expiration.",
     "Your next payment of :amount will be processed on :date.": "Your next payment of :amount will be on :date.",
     "Your last payment of :amount failed. Please update your payment method to retry the failed payment.": "Your last payment of :amount failed. Please update your payment method to retry the failed payment.",
-    "Your subscription has been successfully cancelled. You will still have access until the end of your billing period.": "Your subscription has been successfully cancelled. You will still have access until the end of your billing period.",
+    "Your subscription has been successfully cancelled.": "Your subscription has been successfully cancelled.",
     "Your subscription was successfully resumed.": "Your subscription was successfully resumed.",
     "Your subscription was successfully updated.": "Your subscription was successfully updated."
 }

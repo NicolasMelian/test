@@ -2,12 +2,20 @@
 
 namespace Spark;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use InvalidArgumentException;
 
 class SparkManager
 {
+    /**
+     * Indicates if Spark migrations will be run.
+     *
+     * @var bool
+     */
+    public $runsMigrations = true;
+
     /**
      * The callback that determines the current billable.
      *
@@ -269,5 +277,27 @@ class SparkManager
     public function billableModel($billableType)
     {
         return config("spark.billables.$billableType.model");
+    }
+
+    /**
+     * Configure Spark to not register its migrations.
+     *
+     * @return static
+     */
+    public function ignoreMigrations()
+    {
+        $this->runsMigrations = false;
+
+        return new static();
+    }
+
+    /**
+     * Determine if Spark should run its migrations.
+     *
+     * @return bool
+     */
+    public function runsMigrations()
+    {
+        return $this->runsMigrations;
     }
 }

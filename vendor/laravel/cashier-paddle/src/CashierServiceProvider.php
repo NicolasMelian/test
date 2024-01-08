@@ -5,7 +5,6 @@ namespace Laravel\Paddle;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
-use Laravel\Paddle\Components\Button;
 use Laravel\Paddle\Components\Checkout;
 
 class CashierServiceProvider extends ServiceProvider
@@ -31,6 +30,7 @@ class CashierServiceProvider extends ServiceProvider
     {
         $this->bootRoutes();
         $this->bootResources();
+        $this->bootMigrations();
         $this->bootPublishing();
         $this->bootDirectives();
         $this->bootComponents();
@@ -62,6 +62,18 @@ class CashierServiceProvider extends ServiceProvider
     protected function bootResources()
     {
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'cashier');
+    }
+
+    /**
+     * Boot the package migrations.
+     *
+     * @return void
+     */
+    protected function bootMigrations()
+    {
+        if (Cashier::$runsMigrations && $this->app->runningInConsole()) {
+            $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        }
     }
 
     /**
@@ -105,7 +117,7 @@ class CashierServiceProvider extends ServiceProvider
      */
     protected function bootComponents()
     {
-        Blade::component(Button::class, 'paddle-button');
+        Blade::component('cashier::components.button', 'paddle-button');
         Blade::component(Checkout::class, 'paddle-checkout');
     }
 }

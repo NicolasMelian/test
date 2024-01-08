@@ -32,7 +32,6 @@ class InstallCommand extends Command
         $this->callSilent('vendor:publish', ['--tag' => 'spark-config']);
         $this->callSilent('vendor:publish', ['--tag' => 'spark-views']);
         $this->callSilent('vendor:publish', ['--tag' => 'spark-lang']);
-        $this->callSilent('vendor:publish', ['--tag' => 'spark-migrations']);
 
         $this->registerSparkServiceProvider();
 

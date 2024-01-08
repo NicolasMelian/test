@@ -4,7 +4,7 @@ namespace Spark\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
-use Spark\Contracts\Actions\GeneratesCheckoutSessions;
+use Spark\Contracts\Actions\GeneratesSubscriptionPayLinks;
 use Spark\Spark;
 use Spark\ValidPlan;
 
@@ -27,7 +27,7 @@ class NewSubscriptionController
 
         $subscription = $billable->subscription();
 
-        if ($subscription && $subscription->valid()) {
+        if ($subscription && $subscription->active()) {
             throw ValidationException::withMessages([
                 'plan' => __('You are already subscribed.'),
             ]);
@@ -40,18 +40,11 @@ class NewSubscriptionController
                 ->first()
         );
 
-        /** @var \Laravel\Paddle\Checkout */
-        $checkout = app(GeneratesCheckoutSessions::class)->generateCheckoutSession(
-            $billable,
-            $request->plan
-        );
-
         return response()->json([
-            'checkout' => [
-                'customer' => ['id' => $checkout->getCustomer()->paddle_id],
-                'items' => $checkout->getItems(),
-                'custom_data' => $checkout->getCustomData(),
-            ],
+            'link' => app(GeneratesSubscriptionPayLinks::class)->generatePayLink(
+                $billable,
+                $request->plan
+            ),
         ]);
     }
 }

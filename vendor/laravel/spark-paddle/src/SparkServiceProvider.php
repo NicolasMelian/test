@@ -4,9 +4,8 @@ namespace Spark;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
-use Laravel\Paddle\Events\SubscriptionCreated;
-use Spark\Contracts\Actions\GeneratesCheckoutSessions;
-use Spark\Listeners\SubscriptionCreatedListener;
+use Laravel\Paddle\Cashier;
+use Spark\Contracts\Actions\GeneratesSubscriptionPayLinks;
 
 class SparkServiceProvider extends ServiceProvider
 {
@@ -17,6 +16,8 @@ class SparkServiceProvider extends ServiceProvider
      */
     public function register()
     {
+        Cashier::ignoreMigrations();
+
         if (! $this->app->configurationIsCached()) {
             $this->mergeConfigFrom(__DIR__.'/../config/spark.php', 'spark');
         }
@@ -25,8 +26,8 @@ class SparkServiceProvider extends ServiceProvider
         $this->app->singleton(FrontendState::class);
 
         app()->singleton(
-            GeneratesCheckoutSessions::class,
-            Actions\GenerateCheckoutSession::class
+            GeneratesSubscriptionPayLinks::class,
+            Actions\GenerateSubscriptionPayLink::class
         );
 
         $this->registerCommands();
@@ -42,9 +43,9 @@ class SparkServiceProvider extends ServiceProvider
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'spark');
 
         $this->configureRoutes();
+        $this->configureMigrations();
         $this->configureTranslations();
         $this->configurePublishing();
-        $this->configureListeners();
     }
 
     /**
@@ -55,8 +56,20 @@ class SparkServiceProvider extends ServiceProvider
     protected function configureRoutes()
     {
         Route::group([], function () {
-            $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
+            $this->loadRoutesFrom(__DIR__.'/../routes/routes.php');
         });
+    }
+
+    /**
+     * Configure Spark migrations.
+     *
+     * @return void
+     */
+    protected function configureMigrations()
+    {
+        if (Spark::runsMigrations() && $this->app->runningInConsole()) {
+            $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        }
     }
 
     /**
@@ -113,15 +126,5 @@ class SparkServiceProvider extends ServiceProvider
                 Console\InstallCommand::class,
             ]);
         }
-    }
-
-    /**
-     * Configure the Spark event listeners.
-     *
-     * @return void
-     */
-    protected function configureListeners()
-    {
-        $this->app['events']->listen(SubscriptionCreated::class, SubscriptionCreatedListener::class);
     }
 }
